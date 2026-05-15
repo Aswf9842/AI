@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>HumanSpeak · 人话转换器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --grad-start: #FFB347;
+            --grad-end: #FF6B6B;
+            --card-bg: rgba(255, 255, 255, 0.96);
+            --text-dark: #2D3E50;
+            --text-soft: #5A6E7F;
+            --accent: #FF8C42;
+            --shadow-sm: 0 10px 25px -5px rgba(0,0,0,0.1);
+        }
+        body {
+            background: linear-gradient(135deg, #FFE5B4 0%, #FFD1D1 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Poppins', sans-serif;
+            padding: 20px;
+            transition: background 0.3s;
+        }
+        [dir="rtl"] { text-align: right; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px 0; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 2.5rem;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+        }
+        .card-header {
+            background: linear-gradient(120deg, #FF8C42, #FF5E7E);
+            padding: 2rem 2rem 1.5rem;
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-header::after {
+            content: "🌙✨";
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 3rem;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            display: flex;
+            gap: 6px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        [dir="rtl"] .lang-switch { right: auto; left: 25px; }
+        .lang-btn {
+            background: none; border: none; color: white; cursor: pointer;
+            font-weight: 600; font-size: 0.72rem; padding: 4px 7px;
+            border-radius: 30px; transition: 0.2s;
+        }
+        .lang-btn.active { background: white; color: #FF5E7E; }
+        .card-header h1 {
+            font-size: 2.2rem; font-weight: 800; letter-spacing: -0.01em;
+            display: flex; align-items: center; justify-content: center;
+            gap: 12px; flex-wrap: wrap;
+        }
+        .badge {
+            background: rgba(255,255,255,0.25);
+            padding: 5px 14px; border-radius: 40px;
+            font-size: 0.72rem; font-weight: 500;
+        }
+        .sub { opacity: 0.9; margin-top: 12px; font-size: 0.88rem; }
+        .card-body { padding: 2rem; }
+        .input-group { margin-bottom: 1.5rem; }
+        label { font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        textarea {
+            width: 100%; padding: 1rem 1.2rem; font-size: 1rem;
+            border: 2px solid #FFE0C0; border-radius: 1.5rem;
+            font-family: inherit; resize: vertical; transition: all 0.2s;
+            background: #FFFBF5;
+        }
+        textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 140, 66, 0.2); }
+        .char-counter { text-align: right; margin-top: 6px; font-size: 0.75rem; color: var(--text-soft); }
+        [dir="rtl"] .char-counter { text-align: left; }
+        .style-selector { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+        .style-btn {
+            background: #F5EDE3; border: none; padding: 8px 18px;
+            border-radius: 60px; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; color: #5A4D3E;
+        }
+        .style-btn.active { background: var(--accent); color: white; transform: scale(1.02); box-shadow: 0 6px 12px rgba(255,140,66,0.3); }
+        .examples { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+        .example-chip {
+            background: #FFF0E0; padding: 6px 16px; border-radius: 40px;
+            font-size: 0.78rem; cursor: pointer; transition: all 0.2s; font-weight: 500;
+        }
+        .example-chip:hover { background: #FFE0C0; transform: translateY(-2px); }
+        button.primary {
+            width: 100%; background: linear-gradient(135deg, var(--grad-start), var(--grad-end));
+            border: none; padding: 14px; font-size: 1.1rem; font-weight: 700;
+            color: white; border-radius: 60px; cursor: pointer; transition: all 0.25s;
+            display: flex; align-items: center; justify-content: center; gap: 12px;
+        }
+        button.primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 15px 25px -10px rgba(255, 100, 100, 0.5); }
+        button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .result-area {
+            margin-top: 28px; background: #FFF9F0; border-radius: 1.5rem;
+            padding: 1.5rem; border: 1px solid #FFE5C2;
+        }
+        .result-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; flex-wrap: wrap; }
+        .copy-btn { background: #EDE3D4; border: none; padding: 6px 16px; border-radius: 40px; cursor: pointer; font-size: 0.8rem; font-weight: 500; }
+        .explanation-text { line-height: 1.7; font-size: 1rem; color: #2D3E50; white-space: pre-wrap; }
+        .loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 30px; color: #FF8C42; }
+        .spinner { width: 24px; height: 24px; border: 3px solid #FFD5B5; border-top-color: #FF8C42; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-message { background: #FFECEC; border-left: 5px solid #FF6B6B; padding: 14px; border-radius: 20px; color: #B33; }
+        .extra-cheer { margin-top: 12px; font-size: 0.8rem; color: #FF8C42; min-height: 1.5em; }
+        .footer { text-align: center; margin-top: 20px; color: rgba(0,0,0,0.5); font-size: 0.75rem; }
+        .emoji-rain { position: fixed; top: -20px; font-size: 28px; pointer-events: none; animation: fall linear forwards; z-index: 999; }
+        @keyframes fall { to { transform: translateY(100vh); opacity: 0; } }
+        @media (max-width: 640px) { .card-body { padding: 1.5rem; } .card-header h1 { font-size: 1.6rem; } .lang-switch { position: static; margin-top: 10px; justify-content: center; } }
+    </style>
+</head>
+<body>
+<div class="container" id="app">
+    <div class="card">
+        <div class="card-header">
+            <div class="lang-switch">
+                <button class="lang-btn" data-lang="en">EN</button>
+                <button class="lang-btn active" data-lang="zh">中文</button>
+                <button class="lang-btn" data-lang="es">ES</button>
+                <button class="lang-btn" data-lang="ja">日本語</button>
+                <button class="lang-btn" data-lang="ar">عربي</button>
+            </div>
+            <h1>
+                <span id="titleIcon">🗣️</span>
+                <span id="titleText">人话转换器</span>
+                <span class="badge" id="badgeText">全球版 ✨</span>
+            </h1>
+            <div class="sub" id="subText">把任何天书变成大白话 · 高情绪治愈工具</div>
+        </div>
+        <div class="card-body">
+            <div class="input-group">
+                <label id="inputLabel">📚 扔进你的知识难点</label>
+                <textarea id="knowledgeInput" rows="3" placeholder="比如：什么是量子纠缠？"></textarea>
+                <div class="char-counter" id="charCounter">✨ 等你好久了</div>
+            </div>
+
+            <div class="style-selector" id="styleSelector">
+                <button data-style="simple" class="style-btn active" id="styleSimple">✨ 极简大白话</button>
+                <button data-style="metaphor" class="style-btn" id="styleMeta">🍎 比喻狂魔</button>
+                <button data-style="story" class="style-btn" id="styleStory">📖 故事大王</button>
+                <button data-style="humorous" class="style-btn" id="styleHumor">😄 幽默脱口秀</button>
+                <button data-style="analogy" class="style-btn" id="styleAnalogy">🔗 类比专家</button>
+            </div>
+
+            <div class="examples" id="examplesArea"></div>
+
+            <button id="convertBtn" class="primary">
+                <span>🔮</span> <span id="btnText">变成人话</span> <span>✨</span>
+            </button>
+
+            <div id="resultArea" class="result-area" style="display: none;">
+                <div class="result-header">
+                    <div class="result-title" id="resultTitle">💬 大白话版本</div>
+                    <button id="copyBtn" class="copy-btn">📋 复制</button>
+                </div>
+                <div id="explanationContent" class="explanation-text"></div>
+                <div id="extraCheer" class="extra-cheer"></div>
+            </div>
+        </div>
+    </div>
+    <div class="footer" id="footerNote">⚡ 开源 · 全球脑洞 · 彩蛋收集册 🥚</div>
+</div>
+
+<script>
+// ====== 国际化语言包 ======
+const locales = {
+    zh: {
+        title: "人话转换器", badge: "全球版 ✨", sub: "把任何天书变成大白话 · 高情绪治愈工具",
+        inputLabel: "📚 扔进你的知识难点", placeholder: "比如：什么是量子纠缠？",
+        charPlaceholder: "✨ 等你好久了", charDefault: "✨ 把你最头疼的知识丢进来～",
+        btnDefault: "变成人话", btnLoad: "🤯 大脑加载中...", btnHover: "⚡ 给我变！",
+        resultTitle: "💬 大白话版本", copy: "📋 复制", copied: "✅ 已复制!",
+        errorEmpty: "喂！至少写个「区块链」吧 😭 我嘴都张开了你让我说啥？",
+        errorNetwork: "哎呀，人话生成器卡壳了… 要不刷新一下？ 🔄",
+        styleSimple: "✨ 极简大白话", styleMeta: "🍎 比喻狂魔", styleStory: "📖 故事大王", styleHumor: "😄 幽默脱口秀", styleAnalogy: "🔗 类比专家",
+        examples: [
+            { text: "区块链是什么", value: "区块链到底是什么？" },
+            { text: "牛顿第一定律", value: "牛顿第一定律（惯性定律）" },
+            { text: "机器学习过拟合", value: "什么是机器学习中的过拟合？" },
+            { text: "机会成本", value: "解释一下'机会成本'" },
+            { text: "DNS是什么", value: "为什么DNS叫互联网电话本？" }
+        ],
+        footer: "⚡ 开源 · 全球脑洞 · 彩蛋收集册 🥚",
+        cheerMsgs: ["看懂了吗？你超棒的！ 🌟", "哇，这个知识点已经被你拿捏了 👌", "不懂？没关系，换个风格再试试呀 🌀", "拿捏了！这个概念已经被你驯服 ✨"]
+    },
+    en: {
+        title: "HumanSpeak", badge: "Global Ed. ✨", sub: "Turn jargon into human talk · High-vibe learning",
+        inputLabel: "📚 Drop your knowledge block", placeholder: "e.g., What is quantum entanglement?",
+        charPlaceholder: "✨ I'm waiting for you", charDefault: "✨ Throw your hardest concept in~",
+        btnDefault: "Humanize it", btnLoad: "🤯 Brain loading...", btnHover: "⚡ Make it simple!",
+        resultTitle: "💬 Plain English version", copy: "📋 Copy", copied: "✅ Copied!",
+        errorEmpty: "Hey! At least write 'blockchain' 😭 My mouth is open, say something!",
+        errorNetwork: "Oops, the translator crashed... Refresh maybe? 🔄",
+        styleSimple: "✨ Ultra Simple", styleMeta: "🍎 Metaphor Maniac", styleStory: "📖 Storyteller", styleHumor: "😄 Humorous", styleAnalogy: "🔗 Analogy Pro",
+        examples: [
+            { text: "What is Blockchain?", value: "What is blockchain?" },
+            { text: "Newton's 1st Law", value: "Newton's first law of motion" },
+            { text: "Overfitting in ML", value: "What is overfitting in machine learning?" },
+            { text: "Opportunity Cost", value: "Opportunity cost explained" },
+            { text: "DNS explained", value: "Why is DNS called the phonebook of the internet?" }
+        ],
+        footer: "⚡ Open Source · Global easter eggs · 🥚",
+        cheerMsgs: ["You nailed it! 🎉", "Boom! Knowledge crushed 💪", "Need another style? Toggle above 🌀", "Genius mode activated ✨"]
+    },
+    es: {
+        title: "HablaHumana", badge: "Ed. Global ✨", sub: "Convierte jerga en lenguaje cotidiano",
+        inputLabel: "📚 Pon tu concepto difícil", placeholder: "Ej: ¿Qué es el entrelazamiento cuántico?",
+        charPlaceholder: "✨ Te espero", charDefault: "✨ Escribe tu concepto más complicado",
+        btnDefault: "Humanizar", btnLoad: "🤯 Cargando...", btnHover: "⚡ ¡Hazlo fácil!",
+        resultTitle: "💬 Versión sencilla", copy: "📋 Copiar", copied: "✅ ¡Copiado!",
+        errorEmpty: "¡Oye! Escribe al menos 'blockchain' 😭",
+        errorNetwork: "Ay, se rompió... ¿Refrescar? 🔄",
+        styleSimple: "✨ Súper Simple", styleMeta: "🍎 Metáforas", styleStory: "📖 Cuentos", styleHumor: "😄 Humor", styleAnalogy: "🔗 Analogías",
+        examples: [
+            { text: "¿Blockchain?", value: "¿Qué es blockchain?" },
+            { text: "Ley de Newton", value: "Primera ley de Newton" },
+            { text: "Sobreajuste ML", value: "¿Qué es sobreajuste en ML?" },
+            { text: "Costo oportunidad", value: "Costo de oportunidad" },
+            { text: "DNS", value: "¿Por qué DNS es como una guía telefónica?" }
+        ],
+        footer: "⚡ Código abierto · Huevos de pascua 🥚",
+        cheerMsgs: ["¡Lo entendiste! 🌟", "Concepto dominado 👌", "Prueba otro estilo 🌀", "¡Genial! ✨"]
+    },
+    ja: {
+        title: "ヒト語変換器", badge: "世界版 ✨", sub: "難しい専門用語を優しい言葉に",
+        inputLabel: "📚 難しい知識をどうぞ", placeholder: "例: 量子もつれとは？",
+        charPlaceholder: "✨ お待ちしてます", charDefault: "✨ わからない用語を入れてね",
+        btnDefault: "やさしく変換", btnLoad: "🤯 考え中...", btnHover: "⚡ わかりやすく！",
+        resultTitle: "💬 やさしい説明", copy: "📋 コピー", copied: "✅ コピーしました！",
+        errorEmpty: "ねえ！「ブロックチェーン」くらい書いて😭",
+        errorNetwork: "あれ？変換器がフリーズした... 🔄",
+        styleSimple: "✨ めっちゃ簡単", styleMeta: "🍎 たとえ話", styleStory: "📖 ストーリー", styleHumor: "😄 ユーモア", styleAnalogy: "🔗 アナロジー",
+        examples: [
+            { text: "ブロックチェーン", value: "ブロックチェーンとは？" },
+            { text: "ニュートンの法則", value: "ニュートンの第一法則" },
+            { text: "過学習", value: "機械学習の過学習とは？" },
+            { text: "機会費用", value: "機会費用を説明して" },
+            { text: "DNS", value: "DNSがなぜ電話帳と呼ばれる？" }
+        ],
+        footer: "⚡ オープンソース · イースターエッグ 🥚",
+        cheerMsgs: ["天才！ 🌟", "モノにしたね 👌", "違うスタイルも試してね 🌀", "最高！✨"]
+    },
+    ar: {
+        title: "المتكلم البشري", badge: "نسخة عالمية ✨", sub: "حول المصطلحات الصعبة إلى كلام بسيط",
+        inputLabel: "📚 ضع نقطة صعبة", placeholder: "مثال: ما هو التشابك الكمي؟",
+        charPlaceholder: "✨ في انتظارك", charDefault: "✨ اكتب أصعب مفهوم عندك",
+        btnDefault: "حول إلى بشري", btnLoad: "🤯 جار التحميل...", btnHover: "⚡ بسّطه!",
+        resultTitle: "💬 النسخة البسيطة", copy: "📋 نسخ", copied: "✅ تم النسخ!",
+        errorEmpty: "!مهلاً، اكتب على الأقل 'بلوك تشين' 😭",
+        errorNetwork: "عذراً، تعطل المترجم ... 🔄",
+        styleSimple: "✨ بسيط جداً", styleMeta: "🍎 استعارات", styleStory: "📖 قصص", styleHumor: "😄 فكاهة", styleAnalogy: "🔗 تماثل",
+        examples: [
+            { text: "بلوك تشين", value: "ما هي بلوك تشين؟" },
+            { text: "قانون نيوتن", value: "قانون نيوتن الأول" },
+            { text: "فرط التخصيص", value: "ما هو فرط التخصيص في التعلم الآلي؟" },
+            { text: "تكلفة الفرصة", value: "شرح تكلفة الفرصة" },
+            { text: "DNS", value: "لماذا DNS مثل دفتر الهاتف؟" }
+        ],
+        footer: "⚡ مفتوح المصدر · بيوض الفصح 🥚",
+        cheerMsgs: ["!أنت رائع 🌟", "!هزمت هذا المفهوم 👌", "جرّب نمطاً آخر 🌀", "!عبقري ✨"]
+    }
+};
+
+let currentLang = 'zh';
+let currentStyle = 'simple';
+let isLoading = false;
+
+// 模拟解释数据（每种风格一段完整人话）
+const mockExps = {
+    "区块链到底是什么？": {
+        simple: "想象一个账本，全村每个人手里都有一份。谁干了啥大家都看得见，一个人想偷偷改自己的那页？没用，别人手里的版本不认。这就叫'分布式记账'，区块链最核心的东西。不需要银行来担保，所有人互相监督就够了。\n\n✨ 一句话总结：全村一起记账，谁也赖不了账。",
+        metaphor: "就像你们班有个共享Excel表记录每个人的作业提交情况，但没人能单独删改历史记录，因为每个人电脑里都存着完整备份。就算你把自己电脑里的表改了，其他人的电脑不答应，系统自动选多数版本为准。这就叫'去中心化'，意思是没有一个说了算的老大，大伙儿一起说了算。\n\n✨ 一句话总结：一个防伪版共享文档，谁都改不了历史。",
+        story: "以前有个小村子，村口老王偷偷拿公家的钱，账本一烧没人知道。后来村长发明了新规矩：每笔交易写在纸条上，全贴到墙上，每个人回家抄一份。从此老王想改账？得把全村人手里的抄本全改了才行。老王放弃了。后来整个村子的账越记越厚，每页都跟上页锁在一起——这就是区块链的雏形。\n\n✨ 一句话总结：从老王偷钱说起的故事。",
+        humorous: "区块链就是社死式记账——你干了啥全世界都看着，谁都别想偷偷摸摸改。就像你发了一条朋友圈说'今晚吃火锅'，结果跟老板说在加班——难搞喔，所有人手机里都有你的火锅截图。区块链就是这么尴尬但安全的东西。\n\n✨ 一句话总结：发过的朋友圈不能删，区块链比这更狠。",
+        analogy: "就像Google Docs的编辑历史，但比它猛一万倍——你的每一次修改都永久保存，存在全球无数台电脑里，没有人能删掉。也像投票箱，但每个投票箱都是一样的，而且谁都能查票。也像你妈翻你的聊天记录——你删了？没用，对方手机里还存着呢。\n\n✨ 一句话总结：三种角度：不怕删的Google Doc + 透明的投票箱 + 你妈的手机。"
+    },
+    "牛顿第一定律（惯性定律）": {
+        simple: "东西有种懒劲。没人推它就不动，没东西刹车就不停。你坐在公交车上，车突然刹车你往前倒，因为你的身体想继续往前。没人给你施力，你就不停——那就是惯性，一条懒得要命的物理规律。\n\n✨ 一句话总结：你不动它就是不动，你动它就停不下来。",
+        metaphor: "就像周六早晨的你——没人踹你一脚，你就在床上一动不动。踢了你，你才不情愿地动起来，但让你停也得再踹一脚。你身上的'懒劲'就是惯性，物理学家发现万物都有这股子懒劲儿。\n\n✨ 一句话总结：万物皆懒，没有外力就不动弹。",
+        story: "伽利略做了个思想实验：一个小球从斜坡滚下去，到平地上会一直滚一直滚，如果没有摩擦力，它就永远不打算停。牛顿后来把这个想法变成了定律——动者恒动，静者恒静，除非有外力来打扰。从此物理课多了一条让人没话说的真理。\n\n✨ 一句话总结：小球滚起来就不想停，跟周末的你有得一拼。",
+        humorous: "牛顿：东西都特轴。让它动它不动，让它停它不停。公交车司机最懂这个定律——急刹车的时候全车人东倒西歪，因为大家的身体都叛逆地想继续前进。惯性就是宇宙级的叛逆。\n\n✨ 一句话总结：刹车让你往前倒，这就是惯性在作妖。",
+        analogy: "就像你在冰面上推一个箱子——推一下它滑老远，因为摩擦小，阻力不够让它停下来。也像你打台球，白球撞击别的球之后自己还在滚，直到撞到桌边。也像你甩完披萨面团，它还在空中转——没人动它之前它会一直转下去。\n\n✨ 一句话总结：冰面推箱子、打台球、甩披萨，全是惯性在干活。"
+    },
+    "什么是机器学习中的过拟合？": {
+        simple: "你把考试的答案背得滚瓜烂熟，但题目里数字换了一下你就不会了。因为你背的是'鸡兔同笼一共35个头94条腿'的答案，没理解方法。机器学习也是一样——模型把训练数据记得太死，碰到新数据就懵。这就是过拟合：只会原题，不会变通。\n\n✨ 一句话总结：只会背答案，换个数字就懵。",
+        metaphor: "好比一个学生把教材背到能倒着念，但考试出了道书上没有的例题，他就傻了。因为他学的是'记住'而不是'理解'。机器学习里的过拟合就是这种学渣——不对，是学呆了的那种学霸——训练数据答得满分，真实世界一测就崩。\n\n✨ 一句话总结：学呆了，考原题满分，考变式零分。",
+        story: "小明参加考试，他把上学期的每道期末题答案都背下来了。这次考试老师出了新题，但只是把苹果换成梨，把价格从3块换成5块。小明哭了——因为他背的是'苹果3块'，没背'梨5块'。机器学习里的过拟合就是这么惨。\n\n✨ 一句话总结：小明背答案的故事，机器学习也一样。",
+        humorous: "过拟合就是AI版的'换个马甲就不认识你了'。你给它看了100张猫的照片，它学会了——但全是橘猫。结果你拿一只黑猫过去，它说：这不是猫，因为没有橘色。AI种族歧视实锤。\n\n✨ 一句话总结：橘猫才是猫，黑猫？不认识。",
+        analogy: "就像人脸识别系统只记住了同桌脸上的那颗痘印——换个没痘的人它就不认识了。也像你妈只认你穿的那件校服，你换了件卫衣她就不叫你吃饭了。也像你的手机Face ID只认你素颜——画个眉毛就解锁不了。\n\n✨ 一句话总结：痘印识别器、认校服的妈、素颜Face ID，全部过拟合。"
+    },
+    "解释一下'机会成本'": {
+        simple: "你选了A，就得放弃B。而B能带给你的最大好处，就是你的机会成本。比如周末你去打游戏，没去兼职赚200块，那200块就是机会成本。不是说你'亏了'200块，而是你选游戏的时候已经'放弃'了200块。\n\n✨ 一句话总结：你放弃的那个选项值多少钱。",
+        metaphor: "自助餐你拿了龙虾，就没办法同时拿对面的烤鸭——因为胃容量就那么大。那只被你舍弃的烤鸭，就是你吃龙虾的'机会成本'。经济学说白了就是研究你怎么选、放弃了什么、值不值。\n\n✨ 一句话总结：选龙虾的代价，是那只烤鸭。",
+        story: "小李高考完有两个选择：去读大学花四年时间，或者直接跟表哥做生意。他选了大学，四年后毕业发现表哥已经开了三家店，月入五万。那'月入五万×48个月'就是小李读大学的机会成本。不是说他选错了，而是每个选择背后都有一个被你放弃的人生平行宇宙。\n\n✨ 一句话总结：小李选择了大学，放弃了48个月的店长工资。",
+        humorous: "你选打游戏而不是背单词的时候，已经默默放弃了成为全球翻译官的人生。但别慌——你打游戏也放弃了成为亿万富翁的机会。每天你都在放弃无数个平行宇宙里的自己，而你选了在床上刷手机的最差那个。\n\n✨ 一句话总结：选打游戏的你，放弃了成为亿万富翁的你的那一版人生。",
+        analogy: "十字路口，你选了左边，右边那条路尽头埋着一箱宝藏——那箱宝藏就是机会成本。也像Tinder你左滑了一个人，永远不知道ta是不是你的真爱（但大概率不是）。也像你买了奶茶就放弃了咖啡的提神效果——每一个消费都是一次选择屠杀。\n\n✨ 一句话总结：选岔路、左滑人、买奶茶，全是机会成本的现实版。"
+    },
+    "为什么DNS叫互联网电话本？": {
+        simple: "你记不住每个人的电话号码，但手机通讯录里存了名字。你要打电话，点'妈妈'两个字就行了，手机自动找到妈妈的号码拨出去。DNS就是互联网的通讯录——你输'baidu.com'，它找到对应的IP地址（像电话号码），然后把你的浏览器引过去。\n\n✨ 一句话总结：输入名字，DNS帮你查到号码。",
+        metaphor: "你朋友搬家了，你记不住他新地址，但你的通话记录里还有他的备注名'二狗'，点一下就能播出去。DNS就是这个备注系统——把人类能记住的域名（baidu.com）翻译成电脑能读懂的数字IP（220.181.38.148）。\n\n✨ 一句话总结：把baidu.com翻译成220.181.38.148。",
+        story: "互联网刚出来的时候，上网得记住一串数字才能访问网站，比如204.79.197.200是Bing。正常人哪记得住？后来有个聪明人说：咱们搞个电话本吧，你输bing.com，系统自动帮你查号码。于是DNS诞生了，上网的门槛从'背号码'降到了'打字'。\n\n✨ 一句话总结：以前上网记IP，现在上网打字，全因DNS。",
+        humorous: "DNS就是互联网的114查号台。你在地址栏输入'我要吃火锅.com'——DNS查了半天：没有这个域名。对，查号台就是这样，不是啥都知道的。DNS还会偶尔出bug让你上不了网，像你打查号台占线一样让人暴躁。\n\n✨ 一句话总结：比114靠谱，但也偶尔摆烂。",
+        analogy: "就像手机通讯录——你存的联系人背后都是电话号码，但你从来不拨号，只点名字。DNS就是做这个翻译工作的。也像你的快递柜取件码——你记'3号柜'而不是'3号柜的GPS坐标'。也像你家楼下的门牌号系统——你说'302室'，不需要给快递员发经纬度。\n\n✨ 一句话总结：三件事——通讯录、快递柜、门牌号，全是DNS这回事。"
+    }
+};
+
+// 知识库（兜底匹配，给没有精确对应的关键词提供解释）
+const knowledgeBase = {
+    "量子纠缠": "想象一下你和你双胞胎兄弟姐妹之间的心灵感应——不管隔多远，你摔了一跤ta膝盖也会疼。量子纠缠就是这么诡异：两个粒子一旦配对，不管相隔多少光年，测了其中一个的状态，另一个就瞬间确定。爱因斯坦管这叫'鬼魅般的超距作用'，他觉得这不科学，但这偏偏是真的。两个粒子之间的感情，比异地恋还坚固。\n\n✨ 一句话总结：两个粒子的心灵感应，连爱因斯坦都服了。",
+    "黑洞": "像一个超级无敌吸尘器——不，比吸尘器猛多了。任何东西靠近它，连光都跑不掉，全被吸进去。你站在黑洞旁边喊一声'救命'，声音出不来，光也出不来。黑洞质量大到把周围的空间都压弯了，像一个巨大的宇宙下水道，一切掉进去就再也出不来了。\n\n✨ 一句话总结：宇宙级吸尘器，光都逃不掉。",
+    "熵": "你的房间不收拾只会越来越乱对吧？永远不会自己变整齐。这就是熵——宇宙也在走向越来越混乱。你收拾房间是在'减熵'，但那是费了很大劲才做到的。自然界自发的过程全都是越来越乱。你的桌子、你的衣柜、你的人生——都在无情地熵增。\n\n✨ 一句话总结：房间不收拾只会更乱，宇宙也是。",
+    "递归": "俄罗斯套娃：你打开一个，里面还有一个，再打开还有，直到最小的那个（这叫终止条件），然后倒着往回装。编程里的递归也是一样：一个函数调用自己，一层层往里走，到了最底层再一层层返回。就像照镜子的时候两面镜子对着照，里面的你越来越小，但不会无限小下去——到某个点就停了。\n\n✨ 一句话总结：俄罗斯套娃式思考。",
+    "贝叶斯定理": "你看到邻居拿着伞出门，于是你心里默默把'今天下雨'的概率从30%上调到了80%。贝叶斯定理说的就是这事儿——你手里有了新证据（邻居拿伞）之后，怎么科学地更新你的旧判断（下雨概率）。不是瞎猜，是用数学告诉你'有多大把握该改了'。\n\n✨ 一句话总结：看到邻居拿伞，你觉得更可能下雨了。",
+    "幸存者偏差": "你只看到活下来的人有多风光，没看到死了的人是什么下场。比如问成功人士'你是怎么成功的'——你问的都是活下来的，失败的那些人你根本采访不到。你看到的'成功秘诀'可能只是幸存者运气。就像你只看那些彩票中奖的人，忽略了99.99%没中的人正在吃土。\n\n✨ 一句话总结：只问活下来的，不问死去的。",
+    "边际效用递减": "饿了一天，第一个汉堡幸福到飞起，吃相都不顾了。第二个，嗯还行。第三个，有点撑。第四个，求你别再给我了。第五个，看到就想吐。每多吃一个，快乐增量越来越少——这就是边际效用递减。谈恋爱也是，第一次约会心动到爆，第一百次约会：你去吧我打游戏。\n\n✨ 一句话总结：第一个汉堡最香，第五个想吐。",
+    "机会成本": "周六晚上你选了去聚会，没去上的那节技能课就是你的机会成本。不是你'亏了'，而是你选择A的时候，自动放弃了B能带给你的最大好处。选什么都有代价，承认这一点会让你的人生更容易做决定——因为你知道，完美选项不存在。\n\n✨ 一句话总结：选聚会还是上课？放弃的那个就是成本。",
+    "过拟合": "你把一套卷子的答案背烂了，每题怎么写都记得。但考试换了数字、换了场景，直接零分。因为你在'背'不是在'学'。机器学习里的过拟合就是这个意思——模型把训练数据刻进DNA了，新数据一来就翻车。\n\n✨ 一句话总结：背答案满分，换卷子零分。",
+    "区块链": "一个不会说谎的公共账本。每个交易记录都被打包进一个'区块'，一个接一个链接起来，存遍全球无数台电脑。想改其中一条记录？得同时改服务器里所有人的副本。比改全班同学的作业还难。买菜的、转账的、签合同的——以后很多事不用找第三方担保了，区块链自己就是担保。\n\n✨ 一句话总结：全球共享的防伪账本，机器替人担保。"
+};
+
+function getExplanation(knowledge, style) {
+    // 尝试精确匹配
+    for (let key in mockExps) {
+        if (knowledge.includes(key) || key.includes(knowledge)) {
+            return mockExps[key][style] || mockExps[key]['simple'];
+        }
+    }
+    // 尝试知识库匹配
+    for (let key in knowledgeBase) {
+        if (knowledge.includes(key) || key.includes(knowledge)) {
+            return knowledgeBase[key];
+        }
+    }
+    // 通用回退
+    return `✨ 关于"${knowledge}"的人话版：\n\n这个知识点乍一看挺唬人的，但拆开看也没那么可怕。咱们拿生活里的事来打个比方：就好比你第一次学骑自行车的时候觉得好难啊又要平衡又要踩踏板又要看路，但等你学会了就觉得——哦，原来就这？\n\n你问的这个东西，本质上也是在讲一个类似的模式。别看术语吓人，背后的道理往往朴实得很。试着用自己的话重说一遍，你就发现你已经懂了～`;
+}
+
+function getRandomCheer() {
+    const arr = locales[currentLang].cheerMsgs;
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function updateUILang() {
+    const t = locales[currentLang];
+    document.getElementById('titleText').innerText = t.title;
+    document.getElementById('badgeText').innerText = t.badge;
+    document.getElementById('subText').innerText = t.sub;
+    document.getElementById('inputLabel').innerHTML = t.inputLabel;
+    document.getElementById('knowledgeInput').placeholder = t.placeholder;
+    document.getElementById('btnText').innerText = t.btnDefault;
+    document.getElementById('resultTitle').innerText = t.resultTitle;
+    document.getElementById('copyBtn').innerHTML = t.copy;
+    document.getElementById('footerNote').innerText = t.footer;
+    document.getElementById('styleSimple').innerText = t.styleSimple;
+    document.getElementById('styleMeta').innerText = t.styleMeta;
+    document.getElementById('styleStory').innerText = t.styleStory;
+    document.getElementById('styleHumor').innerText = t.styleHumor;
+    document.getElementById('styleAnalogy').innerText = t.styleAnalogy;
+    // 示例按钮
+    const exContainer = document.getElementById('examplesArea');
+    exContainer.innerHTML = '';
+    t.examples.forEach(ex => {
+        const chip = document.createElement('span');
+        chip.className = 'example-chip';
+        chip.innerText = ex.text;
+        chip.addEventListener('click', () => {
+            document.getElementById('knowledgeInput').value = ex.value;
+            document.getElementById('knowledgeInput').focus();
+        });
+        exContainer.appendChild(chip);
+    });
+    // RTL
+    const htmlEl = document.documentElement;
+    htmlEl.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+    updateCharCounter(document.getElementById('knowledgeInput').value.length);
+}
+
+function updateCharCounter(len) {
+    const t = locales[currentLang];
+    const counterDiv = document.getElementById('charCounter');
+    if (len === 0) counterDiv.innerHTML = t.charPlaceholder;
+    else if (len < 20) counterDiv.innerHTML = `📝 ${len} 字 · 嗯，有内味儿了 🤔`;
+    else if (len < 100) counterDiv.innerHTML = `🔥 ${len} 字 · 好家伙，这知识点有点东西！ 💪`;
+    else counterDiv.innerHTML = `🚀 ${len} 字 · 大佬请赐教！ ⚡`;
+}
+
+// ====== 彩蛋系统 ======
+let eggCount = 0;
+let sameCount = 0;
+let lastContent = "";
+
+function triggerEgg(name) {
+    const egg = document.getElementById('extraCheer');
+    if (!egg) return;
+    const msgs = {
+        "42": "👽 答案是42，但和你的知识点无关喔。",
+        "cat": "🐱 喵~ 随机名词猫化成功！",
+        "repeater": "🦜 你是复读机吗？嘎嘎",
+        "moon": "🌙 深夜学习小星星陪着你，但该睡了",
+        "weekend": "🎉 周末倒计时！学习能量+100"
+    };
+    if (msgs[name]) {
+        egg.innerHTML = `🥚 彩蛋！ ${msgs[name]}`;
+        setTimeout(() => { if(egg) egg.innerHTML = ""; }, 3000);
+    }
+    if (name === "rain") {
+        for(let i=0;i<30;i++) {
+            const emoji = ['💩','🥚','✨','🐱','🍑'][Math.floor(Math.random()*5)];
+            const d = document.createElement('div');
+            d.className = 'emoji-rain';
+            d.innerText = emoji;
+            d.style.left = Math.random() * 100 + '%';
+            d.style.animationDuration = (Math.random()*2+1.5) + 's';
+            document.body.appendChild(d);
+            setTimeout(()=> d.remove(), 3000);
+        }
+    }
+}
+
+async function explain() {
+    const input = document.getElementById('knowledgeInput');
+    const text = input.value.trim();
+    if (!text) {
+        document.getElementById('resultArea').style.display = 'block';
+        document.getElementById('explanationContent').innerHTML = `<div class="error-message">⚠️ ${locales[currentLang].errorEmpty}</div>`;
+        document.getElementById('extraCheer').innerHTML = '';
+        return;
+    }
+    // 彩蛋检测
+    if (text.includes("42") || text.toLowerCase().includes("forty two")) triggerEgg("42");
+    if (text.toLowerCase().includes("cat") || text.includes("🐱")) triggerEgg("cat");
+    const h = new Date().getHours();
+    if (h >= 0 && h < 5) triggerEgg("moon");
+    const d = new Date().getDay();
+    if (d === 5 && h > 14) triggerEgg("weekend");
+    if (Math.random() < 0.03) setTimeout(() => triggerEgg("rain"), 100);
+
+    setLoading(true);
+    setTimeout(() => {
+        try {
+            const exp = getExplanation(text, currentStyle);
+            const final = exp + "\n\n" + getRandomCheer();
+            document.getElementById('explanationContent').innerHTML = final.replace(/\n/g, '<br>');
+            document.getElementById('resultArea').style.display = 'block';
+            document.getElementById('extraCheer').innerHTML = '';
+        } catch(e) {
+            document.getElementById('explanationContent').innerHTML = `<div class="error-message">${locales[currentLang].errorNetwork}</div>`;
+        } finally {
+            setLoading(false);
+        }
+    }, 700);
+}
+
+function setLoading(v) {
+    isLoading = v;
+    const btn = document.getElementById('convertBtn');
+    const span = document.getElementById('btnText');
+    btn.disabled = v;
+    span.innerText = v ? locales[currentLang].btnLoad : locales[currentLang].btnDefault;
+}
+
+// ====== Event Listeners ======
+document.getElementById('knowledgeInput').addEventListener('input', (e) => updateCharCounter(e.target.value.length));
+
+document.querySelectorAll('.style-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStyle = btn.getAttribute('data-style');
+    });
+});
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLang = btn.getAttribute('data-lang');
+        updateUILang();
+    });
+});
+
+document.getElementById('convertBtn').addEventListener('click', () => {
+    const val = document.getElementById('knowledgeInput').value;
+    if (val === lastContent && val !== "") sameCount++;
+    else { sameCount = 0; lastContent = val; }
+    if (sameCount >= 3) triggerEgg("repeater");
+    explain();
+});
+
+const convBtn = document.getElementById('convertBtn');
+convBtn.addEventListener('mouseenter', () => {
+    if (!isLoading) document.getElementById('btnText').innerText = locales[currentLang].btnHover;
+});
+convBtn.addEventListener('mouseleave', () => {
+    if (!isLoading) document.getElementById('btnText').innerText = locales[currentLang].btnDefault;
+});
+
+document.getElementById('copyBtn').addEventListener('click', async () => {
+    const text = document.getElementById('explanationContent').innerText;
+    if (!text) return;
+    try { await navigator.clipboard.writeText(text); } catch {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+    const cb = document.getElementById('copyBtn');
+    const orig = cb.innerHTML;
+    cb.innerHTML = locales[currentLang].copied;
+    setTimeout(() => cb.innerHTML = orig, 1500);
+});
+
+// ====== Init ======
+updateUILang();
+updateCharCounter(0);
+</script>
+</body>
+</html>
